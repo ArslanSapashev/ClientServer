@@ -74,6 +74,9 @@ public class Server {
             }
         }
         if("upload".equals(command)){
+            if(new File(argument).isFile()){
+                //TODO
+            }
             getFileFromClient(in, argument);
         }
     }
@@ -84,12 +87,13 @@ public class Server {
      * @param filename - file to download 'n store locally.
      * @throws IOException
      */
-    private void getFileFromClient(InputStream in, String filename) throws IOException {
+    private boolean getFileFromClient(InputStream in, String filename) throws IOException {
         File file = new File(filename);
         BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));
         if(file.createNewFile()){
             transferFile(in, out);
         }
+        //TODO implement file size sending before file transfer to control is total file downloaded or not
     }
 
     /**
@@ -98,9 +102,11 @@ public class Server {
      * @param file - file to be transmitted
      * @throws IOException
      */
-    private void sendFile(OutputStream out, String file) throws IOException {
+    private boolean sendFile(OutputStream out, String file) throws IOException {
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
         transferFile(in, out);
+        //TODO implement file size sending before file transfer to control is total file downloaded or not
+
     }
 
     private void transferFile (InputStream in, OutputStream out) throws IOException {
