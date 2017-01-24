@@ -71,6 +71,12 @@ public class Server {
         }
     }
 
+    /**
+     * Sends file to the client
+     * @param out - outputstream
+     * @param file - file to be transmitted
+     * @throws IOException
+     */
     private void sendFile(OutputStream out, String file) throws IOException {
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
         String size = String.valueOf(new File(file).length());
