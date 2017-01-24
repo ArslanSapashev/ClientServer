@@ -25,17 +25,17 @@ public class Server {
     String propertyFile = "resources/app.properties";
 
     public void start() throws IOException {
-        server = initialize();
+        server = createServer();
         String dir = getProperty(propertyFile, "root");
         Socket socket = server.accept();
         InputStream in = socket.getInputStream();
         OutputStream out = socket.getOutputStream();
         sendToClient(out, appendEOF("READY"));
+        Scanner scanner = new Scanner(in);
         while (true){
-            Scanner scanner = new Scanner(in);
             if(scanner.hasNext()){
                 try {
-                    processRequest(scanner.nextLine().trim(), dir, out);
+                    processRequest(scanner.nextLine().trim(), dir, out, in);
                 }
                 catch (SecurityException e) {
                     String msg = "You have no permission to access that file/directory";
@@ -45,7 +45,7 @@ public class Server {
         }
     }
 
-    private void processRequest(String request, String dir, OutputStream out) throws IOException{
+    private void processRequest(String request, String dir, OutputStream out, InputStream in) throws IOException{
         String[] reqs = request.trim().split("[ ]+");
         String command = reqs[0].trim().toLowerCase();
         String argument = reqs[1].trim().toLowerCase();
@@ -66,8 +66,29 @@ public class Server {
             dir = argument;
             sendToClient(out, appendEOF(String.format("Directory changed to %s", dir)));
         }
-        if("download".equals(command) && isFile(argument)){
+        if("download".equals(command)){
+            if(isFile(argument)){
+                sendFile(out, argument);
+            } else {
+                sendToClient(out, appendEOF("No such file"));
+            }
+        }
+        if("upload".equals(command)){
+            getFileFromClient(in, argument);
+        }
+    }
 
+    /**
+     * Downloads file from client to the server.
+     * @param in - InputStream bounded to the socket
+     * @param filename - file to download 'n store locally.
+     * @throws IOException
+     */
+    private void getFileFromClient(InputStream in, String filename) throws IOException {
+        File file = new File(filename);
+        BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));
+        if(file.createNewFile()){
+            transferFile(in, out);
         }
     }
 
@@ -79,8 +100,10 @@ public class Server {
      */
     private void sendFile(OutputStream out, String file) throws IOException {
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
-        String size = String.valueOf(new File(file).length());
-        out.write(appendEOF(size).getBytes(StandardCharsets.UTF_8));
+        transferFile(in, out);
+    }
+
+    private void transferFile (InputStream in, OutputStream out) throws IOException {
         byte[] buffer = new byte[bufferSize];
         int readBytes;
         while ((readBytes = in.read(buffer)) != -1){
@@ -134,7 +157,7 @@ public class Server {
      * @return - ServerSocket
      * @throws IOException
      */
-    private ServerSocket initialize() throws IOException{
+    private ServerSocket createServer () throws IOException{
         int port = Integer.parseInt(getProperty(propertyFile, "port"));
         return new ServerSocket(port);
     }
