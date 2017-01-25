@@ -104,9 +104,9 @@ public class Server {
      */
     private boolean sendFile(OutputStream out, String file) throws IOException {
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
+        String fileSize = String.valueOf(new File(file).length());
+        sendToClient(out, appendEOF(fileSize));
         transferFile(in, out);
-        //TODO implement file size sending before file transfer to control is total file downloaded or not
-
     }
 
     private void transferFile (InputStream in, OutputStream out) throws IOException {
@@ -156,7 +156,6 @@ public class Server {
     private String appendEOF(String s){
         return s + "\r\n";
     }
-
 
     /**
      * Creates ServerSocket.
