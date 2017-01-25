@@ -75,15 +75,19 @@ public class Server {
             }
         }
         if("upload".equals(command)){
-            boolean result = false;
-            if(new File(argument).isFile()){
-                result = getFileFromClient(in, argument);
+            long filesize = Long.parseLong(reqs[2]);
+            if(filesize > 0){
+                boolean result = false;
+                if(new File(argument).isFile()){
+                    result = getFileFromClient(in, argument, filesize);
+                }
+                if(result){
+                    sendToClient(out, appendEOF("File uploaded successfully"));
+                } else {
+                    sendToClient(out, appendEOF("Upload failure"));
+                }
             }
-            if(result){
-                sendToClient(out, appendEOF("File uploaded successfully"));
-            } else {
-                sendToClient(out, appendEOF("Upload failure"));
-            }
+            sendToClient(out, appendEOF("Pass the file size as 3rd argument"));
         }
     }
 
