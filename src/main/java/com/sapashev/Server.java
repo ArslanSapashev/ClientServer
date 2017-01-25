@@ -97,7 +97,7 @@ public class Server {
     }
 
     /**
-     * Sends file to the client
+     * Sends file to the client. Before sending the file, file size will be sent to the client.
      * @param out - outputstream
      * @param file - file to be transmitted
      * @throws IOException
