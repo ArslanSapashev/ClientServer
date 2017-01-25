@@ -21,8 +21,8 @@ import java.util.stream.Stream;
  */
 public class Server {
     private ServerSocket server;
-    int bufferSize = 1024;
-    String propertyFile = "resources/app.properties";
+    private int bufferSize = 1024;
+    private String propertyFile = "resources/app.properties";
 
     public void start() throws IOException {
         server = createServer();
