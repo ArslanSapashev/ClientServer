@@ -1,5 +1,6 @@
 package com.sapashev;
 
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -22,7 +23,7 @@ import java.util.stream.Stream;
 public class Server {
     private ServerSocket server;
     private int bufferSize = 1024;
-    private String propertyFile = "resources/app.properties";
+    private String propertyFile = "app.properties";
 
     public void start() throws IOException {
         server = createServer();
@@ -30,7 +31,6 @@ public class Server {
         Socket socket = server.accept();
         try (InputStream in = socket.getInputStream();
              OutputStream out = socket.getOutputStream() ){
-             sendToClient(out, appendEOF("READY"));
              Scanner scanner = new Scanner(in);
              while (true){
                 if(scanner.hasNext()){
@@ -188,7 +188,9 @@ public class Server {
      */
     private ServerSocket createServer () throws IOException{
         int port = Integer.parseInt(getProperty(propertyFile, "port"));
-        return new ServerSocket(port);
+        ServerSocket server = new ServerSocket(port);
+        server.setReuseAddress(true);
+        return server;
     }
 
     /**
