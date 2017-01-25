@@ -7,6 +7,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.Scanner;
 
@@ -35,23 +37,23 @@ public class Client {
                         System.out.println(s);
                     }
                 }
+                if(request.equals("goto ..")){
+                    out.write(appendEOL("goto ..").getBytes());
+                    byte[] buffer = new byte[1024];
+                    int readBytes = in.read(buffer);
+                    System.out.println(new String(Arrays.copyOfRange(buffer,0,readBytes)));
+                }
             }
         }
     }
 
     private String[] getList (InputStream in) throws IOException {
         byte[] buffer = new byte[8192];
-        String[] response = new String[1];
+        String[] response;
         int readBytes;
         readBytes = in.read(buffer);
         byte[] totalBuffer = new byte[readBytes];
         System.arraycopy(buffer,0, totalBuffer,0, readBytes);
-/*        while((readBytes = in.read(buffer)) != -1 || totalBuffer.length != ){
-            byte[] temp = new byte[totalBuffer.length + readBytes];
-            System.arraycopy(totalBuffer,0,temp,0,totalBuffer.length);
-            System.arraycopy(buffer, 0, temp, totalBuffer.length, readBytes);
-            totalBuffer = temp;
-        }*/
         response = new String(totalBuffer).split("[\r\n]+");
         return response;
     }
@@ -83,6 +85,15 @@ public class Client {
         Properties p = new Properties();
         p.load(this.getClass().getClassLoader().getResourceAsStream(propertyFile));
         return p.getProperty(field);
+    }
+
+    /**
+     * Appends end-of-line marker (CRLF) to the end of response string (according to RFC 7231)
+     * @param s - response string to be appended with marker
+     * @return response string with marker;
+     */
+    private String appendEOL (String s){
+        return s + "\r\n";
     }
 
 

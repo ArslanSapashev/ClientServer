@@ -35,11 +35,12 @@ public class Server {
              while (true){
                 if(scanner.hasNext()){
                     try {
-                        processRequest(scanner.nextLine().trim(), dir, out, in);
+                        String ss = scanner.nextLine().trim();
+                        processRequest(ss, dir, out, in);
                     }
                     catch (SecurityException e) {
                         String msg = "You have no permission to access that file/directory";
-                        sendToClient(out, appendEOF(msg));
+                        sendToClient(out, appendEOL(msg));
                     }
                 }
              }
@@ -54,25 +55,31 @@ public class Server {
 
         if("list".equals(command)){
             response = isDirectory(dir) ? getDirList(dir) : String.format("%s is not directory", dir);
-            sendToClient(out, appendEOF(response));
+            sendToClient(out, appendEOL(response));
+            command = "";
         }
         if("goto".equals(command) && "..".equals(argument)){
-            dir = (new File(dir).getParent()) != null ? new File(dir).getParent() : dir;
-            response = dir != null ?
-                    String.format("Current directory %s", dir) :
-                    String.format("%s has no parent directory", dir);
-            sendToClient(out, appendEOF(response));
+            if(new File(dir).getParent() != null){
+                dir = new File(dir).getParent();
+                response = String.format("Current directory %s", dir);
+            } else {
+                response = String.format("%s has no parent directory", dir);
+            }
+            sendToClient(out, appendEOL(response));
+            command = "";
         }
         if("goto".equals(command) && isDirectory(argument)){
             dir = argument;
-            sendToClient(out, appendEOF(String.format("Directory changed to %s", dir)));
+            sendToClient(out, appendEOL(String.format("Directory changed to %s", dir)));
+            command = "";
         }
         if("download".equals(command)){
             if(isFile(argument)){
                 sendFileToClient(out, argument);
             } else {
-                sendToClient(out, appendEOF("No such file"));
+                sendToClient(out, appendEOL("No such file"));
             }
+            command = "";
         }
         if("upload".equals(command)){
             long filesize = Long.parseLong(reqs[2]);
@@ -82,12 +89,13 @@ public class Server {
                     result = getFileFromClient(in, argument, filesize);
                 }
                 if(result){
-                    sendToClient(out, appendEOF("File uploaded successfully"));
+                    sendToClient(out, appendEOL("File uploaded successfully"));
                 } else {
-                    sendToClient(out, appendEOF("Upload failure"));
+                    sendToClient(out, appendEOL("Upload failure"));
                 }
             }
-            sendToClient(out, appendEOF("Pass the file size as 3rd argument"));
+            sendToClient(out, appendEOL("Pass the file size as 3rd argument"));
+            command = "";
         }
     }
 
@@ -117,7 +125,7 @@ public class Server {
     private boolean sendFileToClient (OutputStream out, String file) throws IOException {
         long fileSize = new File(file).length();
         try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(file))){
-            sendToClient(out, appendEOF(String.valueOf(fileSize)));
+            sendToClient(out, appendEOL(String.valueOf(fileSize)));
             return transferFile(in, out, fileSize);
         }
     }
@@ -177,7 +185,7 @@ public class Server {
      * @param s - response string to be appended with marker
      * @return response string with marker;
      */
-    private String appendEOF(String s){
+    private String appendEOL (String s){
         return s + "\r\n";
     }
 
