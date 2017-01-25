@@ -28,20 +28,21 @@ public class Server {
         server = createServer();
         String dir = getProperty(propertyFile, "root");
         Socket socket = server.accept();
-        InputStream in = socket.getInputStream();
-        OutputStream out = socket.getOutputStream();
-        sendToClient(out, appendEOF("READY"));
-        Scanner scanner = new Scanner(in);
-        while (true){
-            if(scanner.hasNext()){
-                try {
-                    processRequest(scanner.nextLine().trim(), dir, out, in);
+        try (InputStream in = socket.getInputStream();
+             OutputStream out = socket.getOutputStream() ){
+             sendToClient(out, appendEOF("READY"));
+             Scanner scanner = new Scanner(in);
+             while (true){
+                if(scanner.hasNext()){
+                    try {
+                        processRequest(scanner.nextLine().trim(), dir, out, in);
+                    }
+                    catch (SecurityException e) {
+                        String msg = "You have no permission to access that file/directory";
+                        sendToClient(out, appendEOF(msg));
+                    }
                 }
-                catch (SecurityException e) {
-                    String msg = "You have no permission to access that file/directory";
-                    sendToClient(out, appendEOF(msg));
-                }
-            }
+             }
         }
     }
 
@@ -68,16 +69,21 @@ public class Server {
         }
         if("download".equals(command)){
             if(isFile(argument)){
-                sendFile(out, argument);
+                sendFileToClient(out, argument);
             } else {
                 sendToClient(out, appendEOF("No such file"));
             }
         }
         if("upload".equals(command)){
+            boolean result = false;
             if(new File(argument).isFile()){
-                //TODO
+                result = getFileFromClient(in, argument);
             }
-            getFileFromClient(in, argument);
+            if(result){
+                sendToClient(out, appendEOF("File uploaded successfully"));
+            } else {
+                sendToClient(out, appendEOF("Upload failure"));
+            }
         }
     }
 
@@ -87,13 +93,15 @@ public class Server {
      * @param filename - file to download 'n store locally.
      * @throws IOException
      */
-    private boolean getFileFromClient(InputStream in, String filename) throws IOException {
+    private boolean getFileFromClient(InputStream in, String filename, long filesize) throws IOException {
+        boolean result = false;
         File file = new File(filename);
-        BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));
-        if(file.createNewFile()){
-            transferFile(in, out);
+        try(BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file))){
+            if(file.createNewFile()){
+                result = transferFile(in, out, filesize);
+            }
         }
-        //TODO implement file size sending before file transfer to control is total file downloaded or not
+        return result;
     }
 
     /**
@@ -102,23 +110,35 @@ public class Server {
      * @param file - file to be transmitted
      * @throws IOException
      */
-    private boolean sendFile(OutputStream out, String file) throws IOException {
-        BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
-        String fileSize = String.valueOf(new File(file).length());
-        sendToClient(out, appendEOF(fileSize));
-        transferFile(in, out);
+    private boolean sendFileToClient (OutputStream out, String file) throws IOException {
+        long fileSize = new File(file).length();
+        try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(file))){
+            sendToClient(out, appendEOF(String.valueOf(fileSize)));
+            return transferFile(in, out, fileSize);
+        }
     }
 
-    private void transferFile (InputStream in, OutputStream out) throws IOException {
+    /**
+     * Copys file from source to destination.
+     * @param in - inputstream (socket or file).
+     * @param out - outputstream (ocket or file).
+     * @param filesize - size of file to be transferred.
+     * @return - true - file copy completed, false - not completed due to some error or exception.
+     * @throws IOException
+     */
+    private boolean transferFile (InputStream in, OutputStream out, long filesize) throws IOException {
         byte[] buffer = new byte[bufferSize];
         int readBytes;
+        long alreadyRead = 0;
         while ((readBytes = in.read(buffer)) != -1){
             if(readBytes == bufferSize){
                 out.write(buffer);
             } else {
                 out.write(Arrays.copyOf(buffer,readBytes));
             }
+            alreadyRead += readBytes;
         }
+        return alreadyRead == filesize ? true : false;
     }
 
     /**
