@@ -7,7 +7,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.Scanner;
@@ -29,19 +28,23 @@ public class Client {
         while (true){
             scanner = new Scanner(System.in);
             while (scanner.hasNext()){
-                String request = scanner.nextLine();
-                if(request.equals("list")){
+                String[] reqs = (scanner.nextLine()).split("[ ]+");
+                if(reqs[0].equals("list")){
                     out.write("list all\r\n".getBytes(StandardCharsets.UTF_8));
                     String[] strings = getList(in);
                     for(String s : strings){
                         System.out.println(s);
                     }
+                    continue;
                 }
-                if(request.equals("goto ..")){
-                    out.write(appendEOL("goto ..").getBytes());
+                if(reqs[0].matches("^goto")){
+                    out.write((appendEOL(reqs[0] + " " + reqs[1] )).getBytes());
                     byte[] buffer = new byte[1024];
                     int readBytes = in.read(buffer);
                     System.out.println(new String(Arrays.copyOfRange(buffer,0,readBytes)));
+                    continue;
+                }
+                if(reqs[0].equals("upload")){
                 }
             }
         }
@@ -54,7 +57,7 @@ public class Client {
         readBytes = in.read(buffer);
         byte[] totalBuffer = new byte[readBytes];
         System.arraycopy(buffer,0, totalBuffer,0, readBytes);
-        response = new String(totalBuffer).split("[\r\n]+");
+        response = new String(totalBuffer, "UTF-8").split("[\r\n]+");
         return response;
     }
 

@@ -24,10 +24,11 @@ public class Server {
     private ServerSocket server;
     private int bufferSize = 1024;
     private String propertyFile = "app.properties";
+    private String dir;
 
     public void start() throws IOException {
         server = createServer();
-        String dir = getProperty(propertyFile, "root");
+        dir = getProperty(propertyFile, "root");
         Socket socket = server.accept();
         try (InputStream in = socket.getInputStream();
              OutputStream out = socket.getOutputStream() ){
@@ -36,7 +37,7 @@ public class Server {
                 if(scanner.hasNext()){
                     try {
                         String ss = scanner.nextLine().trim();
-                        processRequest(ss, dir, out, in);
+                        processRequest(ss, out, in);
                     }
                     catch (SecurityException e) {
                         String msg = "You have no permission to access that file/directory";
@@ -47,7 +48,7 @@ public class Server {
         }
     }
 
-    private void processRequest(String request, String dir, OutputStream out, InputStream in) throws IOException{
+    private void processRequest(String request, OutputStream out, InputStream in) throws IOException{
         String[] reqs = request.trim().split("[ ]+");
         String command = reqs[0].trim().toLowerCase();
         String argument = reqs[1].trim().toLowerCase();
