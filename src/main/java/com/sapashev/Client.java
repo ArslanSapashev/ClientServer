@@ -28,8 +28,8 @@ public class Client {
         while (true){
             scanner = new Scanner(System.in);
             while (scanner.hasNext()){
-                String[] reqs = (scanner.nextLine()).split("[ ]+");
-                if(reqs[0].equals("list")){
+                String request = scanner.nextLine();
+                if(request.matches("^list")){
                     out.write("list all\r\n".getBytes(StandardCharsets.UTF_8));
                     String[] strings = getList(in);
                     for(String s : strings){
@@ -37,14 +37,15 @@ public class Client {
                     }
                     continue;
                 }
-                if(reqs[0].matches("^goto")){
-                    out.write((appendEOL(reqs[0] + " " + reqs[1] )).getBytes());
+                if(request.matches("^goto\\s.+")){
+                    out.write((appendEOL(request).getBytes()));
                     byte[] buffer = new byte[1024];
                     int readBytes = in.read(buffer);
                     System.out.println(new String(Arrays.copyOfRange(buffer,0,readBytes)));
                     continue;
                 }
-                if(reqs[0].equals("upload")){
+                if(request.matches("^upload\\s.+")){
+                    System.out.println("UPLOAD entered");
                 }
             }
         }

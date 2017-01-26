@@ -98,6 +98,9 @@ public class Server {
             sendToClient(out, appendEOL("Pass the file size as 3rd argument"));
             command = "";
         }
+        if(!command.equals("")){
+            out.write(appendEOL("Command not recognized").getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     /**
