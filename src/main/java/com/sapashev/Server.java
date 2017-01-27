@@ -28,7 +28,7 @@ public class Server {
 
     public void start() throws IOException {
         server = createServer();
-        dir = getProperty(propertyFile, "root");
+        dir = new File(getProperty(propertyFile, "root")).getAbsolutePath();
         Socket socket = server.accept();
         try (InputStream in = socket.getInputStream();
              OutputStream out = socket.getOutputStream() ){
@@ -85,10 +85,7 @@ public class Server {
         if("upload".equals(command)){
             long filesize = Long.parseLong(reqs[2]);
             if(filesize > 0){
-                boolean result = false;
-                if(new File(argument).isFile()){
-                    result = getFileFromClient(in, argument, filesize);
-                }
+                boolean result = getFileFromClient(in, argument, filesize);
                 if(result){
                     sendToClient(out, appendEOL("File uploaded successfully"));
                 } else {
@@ -146,13 +143,16 @@ public class Server {
         byte[] buffer = new byte[bufferSize];
         int readBytes;
         long alreadyRead = 0;
-        while ((readBytes = in.read(buffer)) != -1){
-            if(readBytes == bufferSize){
+        long total = 0;
+        while ((readBytes = in.read(buffer)) != -1 && total < filesize){
+            total += readBytes;
+            if(readBytes <= bufferSize){
                 out.write(buffer);
             } else {
                 out.write(Arrays.copyOf(buffer,readBytes));
             }
             alreadyRead += readBytes;
+            out.flush();
         }
         return alreadyRead == filesize ? true : false;
     }

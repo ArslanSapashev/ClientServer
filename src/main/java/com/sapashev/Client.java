@@ -1,8 +1,6 @@
 package com.sapashev;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -45,20 +43,38 @@ public class Client {
                     continue;
                 }
                 if(request.matches("^upload\\s.+")){
-                    System.out.println("UPLOAD entered");
+                    String[] args = request.split("[ ]+");
+                    String argument = args[1].trim();
+                    String source = args[2].trim();
+                    if(new File(source).isFile()){
+                        long size = new File(source).length();
+                        String req = request + " " + String.valueOf(new File(source));
+                        out.write((req).getBytes(StandardCharsets.UTF_8));
+                        int counter = 0;
+                        InputStream inFile = new FileInputStream(source);
+                        while (counter < size){
+                            out.write(inFile.read());
+                            ++counter;
+                        }
+                        out.flush();
+                        inFile.close();
+                    }
+                    continue;
                 }
+                System.out.println("Command doesn't recognized");
             }
         }
     }
 
     private String[] getList (InputStream in) throws IOException {
         byte[] buffer = new byte[8192];
-        String[] response;
+        String[] response = {};
         int readBytes;
-        readBytes = in.read(buffer);
-        byte[] totalBuffer = new byte[readBytes];
-        System.arraycopy(buffer,0, totalBuffer,0, readBytes);
-        response = new String(totalBuffer, "UTF-8").split("[\r\n]+");
+        if((readBytes = in.read(buffer)) != -1){
+            byte[] totalBuffer = new byte[readBytes];
+            System.arraycopy(buffer,0, totalBuffer,0, readBytes);
+            response = new String(totalBuffer, "UTF-8").split("[\r\n]+");
+        }
         return response;
     }
 
