@@ -1,81 +1,66 @@
 package com.sapashev;
 
-import java.io.*;
+import com.sapashev.ClientHandlers.ChangeDir;
+import com.sapashev.ClientHandlers.Downloader;
+import com.sapashev.ClientHandlers.Lister;
+import com.sapashev.ClientHandlers.Uploader;
+import com.sapashev.ClientHandlers.Default;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 
 /**
- * Client class
+ * Implements client side interaction.
  * @author Arslan Sapashev
- * @since 25.01.2017
+ * @since 27.01.2017
  * @version 1.0
  */
+
 public class Client {
-    private String propertyFile = "app.properties";
+    private final String propertyFile = "app.properties";
 
     public void start() throws IOException {
         Socket socket = createSocket(propertyFile);
-        InputStream in = socket.getInputStream();
-        OutputStream out = socket.getOutputStream();
-        Scanner scanner;
-        while (true){
-            scanner = new Scanner(System.in);
+        try(InputStream in = socket.getInputStream();
+            OutputStream out = socket.getOutputStream();
+            Scanner scanner = new Scanner(System.in)) {
+
+            Map<String, Handler> map = createCommandMap();
+            SocketSettings s = createSocketSettings(socket, in, out);
+
             while (scanner.hasNext()){
                 String request = scanner.nextLine();
-                if(request.matches("^list")){
-                    out.write("list all\r\n".getBytes(StandardCharsets.UTF_8));
-                    String[] strings = getList(in);
-                    for(String s : strings){
-                        System.out.println(s);
-                    }
-                    continue;
+                if(request.trim().equalsIgnoreCase("exit")){
+                    break;
                 }
-                if(request.matches("^goto\\s.+")){
-                    out.write((appendEOL(request).getBytes()));
-                    byte[] buffer = new byte[1024];
-                    int readBytes = in.read(buffer);
-                    System.out.println(new String(Arrays.copyOfRange(buffer,0,readBytes)));
-                    continue;
+                String[] args = request.trim().split("[ ]+");
+                if(args.length >= 1 && args[0] != null){
+                    Handler handler = map.getOrDefault(args[0], new Default());
+                    handler.handle(s, request);
                 }
-                if(request.matches("^upload\\s.+")){
-                    String[] args = request.split("[ ]+");
-                    String argument = args[1].trim();
-                    String source = args[2].trim();
-                    if(new File(source).isFile()){
-                        long size = new File(source).length();
-                        String req = request + " " + String.valueOf(new File(source));
-                        out.write((req).getBytes(StandardCharsets.UTF_8));
-                        int counter = 0;
-                        InputStream inFile = new FileInputStream(source);
-                        while (counter < size){
-                            out.write(inFile.read());
-                            ++counter;
-                        }
-                        out.flush();
-                        inFile.close();
-                    }
-                    continue;
-                }
-                System.out.println("Command doesn't recognized");
             }
         }
     }
 
-    private String[] getList (InputStream in) throws IOException {
-        byte[] buffer = new byte[8192];
-        String[] response = {};
-        int readBytes;
-        if((readBytes = in.read(buffer)) != -1){
-            byte[] totalBuffer = new byte[readBytes];
-            System.arraycopy(buffer,0, totalBuffer,0, readBytes);
-            response = new String(totalBuffer, "UTF-8").split("[\r\n]+");
-        }
-        return response;
+    /**
+     * Creates and fills up map which contains mappings command-handler.
+     * @return - command map.
+     */
+    private Map<String, Handler> createCommandMap(){
+        Map<String, Handler> map = new HashMap<>();
+        map.put("list", new Lister());
+        map.put("goto", new ChangeDir());
+        map.put("upload", new Uploader());
+        map.put("download", new Downloader());
+        return map;
     }
 
     /**
@@ -108,13 +93,16 @@ public class Client {
     }
 
     /**
-     * Appends end-of-line marker (CRLF) to the end of response string (according to RFC 7231)
-     * @param s - response string to be appended with marker
-     * @return response string with marker;
+     * Initializes socket settings.
+     * @param in - socket input stream.
+     * @param out - socket output stream.
+     * @return - new SocketSettings object.
      */
-    private String appendEOL (String s){
-        return s + "\r\n";
+    private SocketSettings createSocketSettings (Socket socket, InputStream in, OutputStream out) throws IOException{
+        String root = getProperty(propertyFile, "root");
+        SocketSettings ss = new SocketSettings(socket, root, in, out);
+        ss.setDir(getProperty(propertyFile,"userDir"));
+        ss.setBufferSize(Integer.parseInt(getProperty(propertyFile, "bufferSize")));
+        return ss;
     }
-
-
 }
